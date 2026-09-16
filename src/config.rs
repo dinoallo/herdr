@@ -126,6 +126,7 @@ impl Config {
             .chain(window_title_diagnostics(&self.ui.window_title))
             .chain(self.invalid_sidebar_bounds_diagnostic())
             .chain(self.invalid_headless_size_diagnostic())
+            .chain(self::openers::opener_diagnostics(&self.openers))
             .collect()
     }
 
