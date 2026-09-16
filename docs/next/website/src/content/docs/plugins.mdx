@@ -279,8 +279,14 @@ for common ids, or parse the context JSON for the full shape.
 Plugins that need to open a workspace on the user's local machine can call
 `client.open_workspace` through `HERDR_BIN_PATH`. The server forwards the
 workspace id and opener to the foreground client, or to the client identified
-by `HERDR_PLUGIN_INVOKING_CLIENT_TOKEN`; the client owns endpoint and local
-editor resolution.
+by `HERDR_PLUGIN_INVOKING_CLIENT_TOKEN`; the client owns endpoint and opener
+resolution.
+
+Plugins are not required for simple editors. A `type = "open_workspace"`
+keybinding calls the same API directly on the client that pressed the key, so
+editors that only need an argv template can be configured without installing a
+plugin on every machine that hosts a workspace. See
+[Openers](/docs/configuration/#openers).
 
 Use `HERDR_BIN_PATH` when a plugin needs to call Herdr portably from Node,
 PowerShell, Bash, or another runtime. The raw socket transport behind

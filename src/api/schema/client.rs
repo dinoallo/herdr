@@ -29,6 +29,7 @@ pub enum ClientOpenWorkspaceReason {
     WorkspaceNotFound,
     InvalidPath,
     UnsupportedOpener,
+    OpenerMisconfigured,
     LaunchFailed,
     TimedOut,
 }

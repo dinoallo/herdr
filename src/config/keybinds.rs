@@ -83,6 +83,7 @@ pub enum CommandKeybindType {
     Pane,
     Popup,
     PluginAction,
+    OpenWorkspace,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -101,6 +102,8 @@ pub struct CommandKeybindConfig {
     pub width: Option<PopupSize>,
     /// Optional popup height as cells or a percentage string when type = "popup".
     pub height: Option<PopupSize>,
+    /// Opener id used when type = "open_workspace".
+    pub opener: Option<String>,
 }
 
 impl Default for CommandKeybindConfig {
@@ -112,6 +115,7 @@ impl Default for CommandKeybindConfig {
             description: None,
             width: None,
             height: None,
+            opener: None,
         }
     }
 }
@@ -122,6 +126,7 @@ pub enum CustomCommandAction {
     Pane,
     Popup,
     PluginAction,
+    OpenWorkspace,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -301,6 +306,7 @@ pub struct CustomCommandKeybind {
     pub description: Option<String>,
     pub width: Option<PopupSize>,
     pub height: Option<PopupSize>,
+    pub opener: Option<String>,
 }
 
 /// Parsed keybinds for Herdr actions.
@@ -758,7 +764,23 @@ fn append_custom_command_bindings(
         let key_field = format!("keys.command[{index}].key");
         let command_field = format!("keys.command[{index}].command");
 
-        if command.command.trim().is_empty() {
+        let is_open_workspace = matches!(command.action_type, CommandKeybindType::OpenWorkspace);
+        if is_open_workspace
+            && command
+                .opener
+                .as_deref()
+                .map(str::trim)
+                .unwrap_or_default()
+                .is_empty()
+        {
+            let diag = format!(
+                "open_workspace custom command without opener: {command_field}; disabling custom command"
+            );
+            warn!(message = %diag, "config diagnostic");
+            diagnostics.push(diag);
+            continue;
+        }
+        if !is_open_workspace && command.command.trim().is_empty() {
             let diag = format!("empty custom command: {command_field}; disabling custom command");
             warn!(message = %diag, "config diagnostic");
             diagnostics.push(diag);
@@ -781,6 +803,7 @@ fn append_custom_command_bindings(
             CommandKeybindType::Pane => CustomCommandAction::Pane,
             CommandKeybindType::Popup => CustomCommandAction::Popup,
             CommandKeybindType::PluginAction => CustomCommandAction::PluginAction,
+            CommandKeybindType::OpenWorkspace => CustomCommandAction::OpenWorkspace,
         };
         let (width, height) = if action == CustomCommandAction::Popup {
             (command.width, command.height)
@@ -803,6 +826,7 @@ fn append_custom_command_bindings(
             description: command.description.clone(),
             width,
             height,
+            opener: command.opener.clone(),
         });
     }
 }
@@ -2256,6 +2280,43 @@ description = "say hello"
             keybinds.custom_commands[0].description,
             Some("say hello".to_string())
         );
+    }
+
+    #[test]
+    fn open_workspace_command_parses_its_opener() {
+        let config: Config = toml::from_str(
+            r#"
+[[keys.command]]
+key = "prefix+shift+o"
+type = "open_workspace"
+opener = "zed"
+"#,
+        )
+        .unwrap();
+        let keybinds = config.keybinds();
+        assert_eq!(keybinds.custom_commands.len(), 1);
+        assert_eq!(
+            keybinds.custom_commands[0].action,
+            CustomCommandAction::OpenWorkspace
+        );
+        assert_eq!(keybinds.custom_commands[0].opener, Some("zed".to_string()));
+    }
+
+    #[test]
+    fn open_workspace_command_requires_an_opener() {
+        let config: Config = toml::from_str(
+            r#"
+[[keys.command]]
+key = "prefix+shift+o"
+type = "open_workspace"
+"#,
+        )
+        .unwrap();
+        let (keybinds, diagnostics) = config.live_keybinds_with_diagnostics().unwrap();
+        assert!(keybinds.keybinds.custom_commands.is_empty());
+        assert!(diagnostics
+            .iter()
+            .any(|line| line.contains("open_workspace custom command without opener")));
     }
 
     #[test]

@@ -978,6 +978,7 @@ pub enum ClientShellCommandAction {
     Pane,
     Popup,
     PluginAction,
+    OpenWorkspace,
     /// A future endpoint action kind that this client cannot execute.
     #[serde(other)]
     Unknown,
@@ -990,6 +991,7 @@ impl From<crate::config::CustomCommandAction> for ClientShellCommandAction {
             crate::config::CustomCommandAction::Pane => Self::Pane,
             crate::config::CustomCommandAction::Popup => Self::Popup,
             crate::config::CustomCommandAction::PluginAction => Self::PluginAction,
+            crate::config::CustomCommandAction::OpenWorkspace => Self::OpenWorkspace,
         }
     }
 }
@@ -1003,6 +1005,7 @@ impl TryFrom<ClientShellCommandAction> for crate::config::CustomCommandAction {
             ClientShellCommandAction::Pane => Ok(Self::Pane),
             ClientShellCommandAction::Popup => Ok(Self::Popup),
             ClientShellCommandAction::PluginAction => Ok(Self::PluginAction),
+            ClientShellCommandAction::OpenWorkspace => Ok(Self::OpenWorkspace),
             ClientShellCommandAction::Unknown => Err(()),
         }
     }
@@ -1015,6 +1018,8 @@ pub struct ClientShellCommand {
     pub binding_labels: Vec<String>,
     pub action: ClientShellCommandAction,
     pub description: Option<String>,
+    /// Opener id for `OpenWorkspace` commands.
+    pub opener: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -2746,6 +2751,7 @@ mod tests {
                 binding_labels: vec!["prefix+z".into()],
                 action: ClientShellCommandAction::Shell,
                 description: Some("deploy".into()),
+                opener: None,
             }],
         }));
         let encoded = bincode::serde::encode_to_vec(&msg, bincode::config::standard()).unwrap();

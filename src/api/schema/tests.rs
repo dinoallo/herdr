@@ -398,6 +398,7 @@ fn client_open_workspace_requests_and_responses_round_trip() {
         result: ResponseResult::ClientOpenWorkspace {
             opened: true,
             reason: ClientOpenWorkspaceReason::Opened,
+            message: None,
         },
     };
     let json = serde_json::to_value(response).unwrap();

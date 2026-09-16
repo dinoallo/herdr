@@ -302,6 +302,7 @@ command = "local-only"
             binding_labels: vec!["prefix+c".into(), "prefix+y".into()],
             action: crate::protocol::ClientShellCommandAction::Shell,
             description: Some("loaded endpoint command".into()),
+            opener: None,
         });
     local_state.set_snapshot(Box::new(local_projection));
     assert_eq!(
@@ -343,6 +344,7 @@ command = "local-only"
             binding_labels: vec!["prefix+c".into(), "prefix+y".into()],
             action: crate::protocol::ClientShellCommandAction::Shell,
             description: Some("loaded endpoint command".into()),
+            opener: None,
         });
     local_state.mode = ClientShellMode::Prefix;
     local_state.set_snapshot(Box::new(id_only_projection));
@@ -374,6 +376,7 @@ new_tab = "prefix+n"
             binding_labels: vec!["prefix+z".into()],
             action: crate::protocol::ClientShellCommandAction::Shell,
             description: Some("remote command".into()),
+            opener: None,
         });
     state.set_snapshot(Box::new(projection));
 
@@ -407,6 +410,7 @@ fn custom_binding_invokes_only_the_endpoint_manifest_id() {
         command: "secret-command --token hidden".into(),
         action: crate::config::CustomCommandAction::Shell,
         description: None,
+        opener: None,
         width: None,
         height: None,
     };
@@ -419,6 +423,7 @@ fn custom_binding_invokes_only_the_endpoint_manifest_id() {
             binding_labels: binding.bindings.labels(),
             action: crate::protocol::ClientShellCommandAction::Shell,
             description: None,
+            opener: None,
         });
     state.set_snapshot(Box::new(projection));
 
@@ -450,6 +455,7 @@ fn plugin_command_carries_client_owned_selection_coordinates() {
         command: "plugin.action".into(),
         action: crate::config::CustomCommandAction::PluginAction,
         description: None,
+        opener: None,
         width: None,
         height: None,
     };
@@ -462,6 +468,7 @@ fn plugin_command_carries_client_owned_selection_coordinates() {
             binding_labels: binding.bindings.labels(),
             action: crate::protocol::ClientShellCommandAction::PluginAction,
             description: None,
+            opener: None,
         });
     state.set_snapshot(Box::new(projection));
     let mut pane_surface = surface();
@@ -679,6 +686,7 @@ fn custom_binding_missing_from_endpoint_manifest_is_not_forwarded() {
         command: "secret-command".into(),
         action: crate::config::CustomCommandAction::Shell,
         description: None,
+        opener: None,
         width: None,
         height: None,
     };
@@ -706,6 +714,7 @@ fn help_overlay_restores_released_search_scroll_and_custom_binding_behavior() {
             binding_labels: vec!["prefix+z".into()],
             action: crate::protocol::ClientShellCommandAction::PluginAction,
             description: Some("run plugin action".into()),
+            opener: None,
         });
     state.set_snapshot(Box::new(projection));
     state.set_pane_surface(surface());

@@ -62,6 +62,7 @@ impl App {
                 binding_labels: entry.binding.bindings.labels(),
                 action: entry.action,
                 description: entry.binding.description.clone(),
+                opener: entry.binding.opener.clone(),
             })
             .collect()
     }
@@ -240,7 +241,38 @@ impl App {
                     invoking_client_token,
                 )
                 .map_err(io::Error::other),
+            crate::config::CustomCommandAction::OpenWorkspace => {
+                self.queue_client_open_workspace(binding, invoking_client_token)
+            }
         }
+    }
+
+    /// Queues a workspace open for the headless server to dispatch.
+    ///
+    /// The app cannot reach client connections, so the request is picked up
+    /// after the current API call completes.
+    fn queue_client_open_workspace(
+        &mut self,
+        binding: &crate::config::CustomCommandKeybind,
+        invoking_client_token: Option<String>,
+    ) -> io::Result<()> {
+        let opener = binding
+            .opener
+            .as_deref()
+            .map(str::trim)
+            .filter(|opener| !opener.is_empty())
+            .ok_or_else(|| io::Error::other("open_workspace command is missing an opener"))?;
+        let Some(workspace_index) = self.state.active else {
+            return Err(io::Error::other("no active workspace to open"));
+        };
+        let workspace_id = self.public_workspace_id(workspace_index);
+        self.pending_client_open_workspace
+            .push(crate::app::PendingClientOpenWorkspace {
+                workspace_id,
+                opener: opener.to_string(),
+                invoking_client_token,
+            });
+        Ok(())
     }
 
     fn spawn_custom_popup_command(
@@ -605,6 +637,7 @@ mod tests {
             command: "secret-command --token hidden".into(),
             action,
             description: Some("safe description".into()),
+            opener: None,
             width: None,
             height: None,
         }

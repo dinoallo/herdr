@@ -74,6 +74,7 @@ fn open_workspace_api_waits_for_the_target_client() {
         ResponseResult::ClientOpenWorkspace {
             opened: true,
             reason: ClientOpenWorkspaceReason::Opened,
+            message: None,
         }
     );
 
@@ -123,8 +124,57 @@ fn open_workspace_api_rejects_an_unsupported_client() {
         ResponseResult::ClientOpenWorkspace {
             opened: false,
             reason: ClientOpenWorkspaceReason::UnsupportedClient,
+            message: Some("target client does not support client.open_workspace".to_string()),
         }
     );
+
+    shutdown_test_runtimes(&mut server);
+}
+
+#[test]
+fn open_workspace_keybinding_queues_a_client_request() {
+    let mut server = test_headless_server();
+    server.app.state.workspaces = vec![crate::workspace::Workspace::test_new("project")];
+    server.app.state.active = Some(0);
+    server.app.state.ensure_test_terminals();
+    let workspace_id = server.app.public_workspace_id(0);
+
+    let (writer, control_rx, _render_rx) = test_client_writer();
+    let mut connection = ClientConnection::new_with_mode(
+        ClientConnectionMode::ClientShell,
+        (80, 24),
+        crate::kitty_graphics::HostCellSize::default(),
+        1,
+        crate::protocol::RenderEncoding::SemanticFrame,
+        Some(writer),
+    );
+    connection.endpoint_capabilities = vec![CLIENT_OPEN_WORKSPACE_CAPABILITY.into()];
+    server.clients.insert(11, connection);
+    server.foreground_client_id = Some(11);
+
+    server
+        .app
+        .pending_client_open_workspace
+        .push(crate::app::PendingClientOpenWorkspace {
+            workspace_id,
+            opener: "zed".to_string(),
+            invoking_client_token: Some(format!(
+                "endpoint:{}:11:client-shell:1",
+                server.client_shell_boot_id
+            )),
+        });
+    server.drain_client_open_workspace_intents();
+
+    let ServerMessage::EndpointControl { kind, data } =
+        read_server_message(control_rx.recv_timeout(Duration::from_secs(1)).unwrap())
+    else {
+        panic!("expected endpoint control request");
+    };
+    assert_eq!(kind, CLIENT_OPEN_WORKSPACE_REQUEST_KIND);
+    let request: EndpointOpenWorkspaceRequest = serde_json::from_str(&data).unwrap();
+    assert_eq!(request.opener.as_deref(), Some("zed"));
+    assert!(std::path::Path::new(&request.path).is_absolute());
+    assert!(server.app.pending_client_open_workspace.is_empty());
 
     shutdown_test_runtimes(&mut server);
 }

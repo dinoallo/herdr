@@ -101,6 +101,17 @@ impl AppPolicy {
     };
 }
 
+/// A workspace open that runs on the client that triggered a custom command.
+///
+/// Custom commands execute inside the app, which cannot reach client
+/// connections, so the headless server drains this queue and dispatches it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct PendingClientOpenWorkspace {
+    pub(crate) workspace_id: String,
+    pub(crate) opener: String,
+    pub(crate) invoking_client_token: Option<String>,
+}
+
 pub struct App {
     pub state: AppState,
     pub(crate) pane_graphics: pane_graphics::Runtime,
@@ -126,6 +137,8 @@ pub struct App {
     pub(crate) pending_api_worktree_creates: HashMap<std::path::PathBuf, u64>,
     pub(crate) pending_api_worktree_removes: HashMap<String, u64>,
     pub(crate) pending_api_worktree_remove_paths: HashMap<std::path::PathBuf, u64>,
+    /// Client-directed workspace opens requested by `type = "open_workspace"` commands.
+    pub(crate) pending_client_open_workspace: Vec<PendingClientOpenWorkspace>,
     pub(crate) pending_worktree_remove_runtime_exits: HashMap<crate::layout::PaneId, usize>,
     pub(crate) pending_worktree_remove_runtime_restores: HashMap<crate::layout::PaneId, u64>,
     pub(crate) next_api_worktree_operation_id: u64,
@@ -585,6 +598,7 @@ impl App {
             pending_api_worktree_creates: HashMap::new(),
             pending_api_worktree_removes: HashMap::new(),
             pending_api_worktree_remove_paths: HashMap::new(),
+            pending_client_open_workspace: Vec::new(),
             pending_worktree_remove_runtime_exits: HashMap::new(),
             pending_worktree_remove_runtime_restores: HashMap::new(),
             next_api_worktree_operation_id: 1,

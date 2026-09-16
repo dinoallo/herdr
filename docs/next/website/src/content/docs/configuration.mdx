@@ -237,6 +237,66 @@ Custom commands receive `HERDR_SOCKET_PATH`, `HERDR_BIN_PATH`, `HERDR_ACTIVE_WOR
 
 On Windows, custom command strings use `cmd.exe /d /c`, so environment variables use `%HERDR_BIN_PATH%` syntax. To run PowerShell syntax, invoke it explicitly, for example `powershell.exe -NoProfile -Command "..."`.
 
+## Openers
+
+`type = "open_workspace"` opens the focused workspace in the editor named by an
+`[[openers]]` entry:
+
+```toml
+[[keys.command]]
+key = "prefix+shift+o"
+type = "open_workspace"
+opener = "zed"
+description = "open in Zed"
+```
+
+Herdr core ships no editor definitions. Each opener is data: a list of candidate
+executables plus argv templates.
+
+```toml
+[[openers]]
+id = "zed"
+bin_env = "ZED_BIN"
+bins = ["zed", "zedit", "zeditor"]
+argv = ["{bin}", "-n", "{path}"]
+argv_remote = ["{bin}", "-n", "ssh://{ssh_target}{path}"]
+
+[[openers]]
+id = "vscode"
+bins = ["code", "code-insiders"]
+argv = ["{bin}", "--reuse-window", "{path}"]
+argv_remote = ["{bin}", "--reuse-window", "--remote", "ssh-remote+{host}", "{path}"]
+```
+
+Resolution order and rules:
+
+- `bin_env` names an environment variable that overrides the executable when it
+  is set and non-empty.
+- Otherwise the first existing candidate in `bins` wins. Bare names resolve on
+  `PATH`; a value containing a path separator is used as a literal path.
+- `argv` is used for local endpoints. `argv_remote` is used for SSH endpoints,
+  and an opener without `argv_remote` cannot open remote workspaces.
+- Supported placeholders are `{bin}`, `{path}`, `{host}`, `{user}`, `{port}`,
+  and `{ssh_target}`. Unknown placeholders and duplicate opener ids are reported
+  as config diagnostics.
+- Templates are argv arrays, never shell strings, so a workspace path cannot
+  inject extra arguments.
+
+Openers are resolved by the Herdr client that receives the request, not by the
+server. In a remote session the client is your local machine, so the editor must
+be installed there and `bin_env` and `bins` are evaluated against the client's
+environment. The same entries serve `herdr open-workspace` and the
+`client.open_workspace` socket method; passing `--opener NAME` selects the entry,
+and no opener is needed when exactly one entry is configured.
+
+Notes:
+
+- `bin_env` is read from the client process, so export `ZED_BIN` in the shell
+  that launches the client, not in a plugin config directory.
+- Remote entries receive the remote workspace path in `{path}` and the SSH
+  target in `{ssh_target}`, so an editor that supports remote projects over SSH
+  can build its own argument shape.
+
 ## Theme
 
 Choose a built-in theme:

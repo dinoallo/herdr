@@ -231,6 +231,9 @@ impl ClientShellConfig {
                             crate::protocol::ClientShellCommandAction::PluginAction => {
                                 crate::config::CommandKeybindType::PluginAction
                             }
+                            crate::protocol::ClientShellCommandAction::OpenWorkspace => {
+                                crate::config::CommandKeybindType::OpenWorkspace
+                            }
                             crate::protocol::ClientShellCommandAction::Unknown => return None,
                         };
                         Some(crate::config::CommandKeybindConfig {
@@ -246,6 +249,7 @@ impl ClientShellConfig {
                             description: command.description.clone(),
                             width: None,
                             height: None,
+                            opener: command.opener.clone(),
                         })
                     })
                     .collect();
@@ -273,6 +277,7 @@ impl ClientShellConfig {
                         description: command.description.clone(),
                         width: None,
                         height: None,
+                        opener: command.opener.clone(),
                     });
             }
         }

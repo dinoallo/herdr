@@ -3,6 +3,7 @@ use crossterm::event::{KeyCode, KeyModifiers};
 mod io;
 mod keybinds;
 mod model;
+mod openers;
 mod sidebar;
 mod sound;
 mod tab_bar;
@@ -28,6 +29,7 @@ pub use self::{
         ToastClipboardPosition, ToastConfig, ToastDelivery, ToastHerdrPosition,
         UpdateChannelConfig, MAX_TOAST_DELAY_SECONDS,
     },
+    openers::OpenerConfig,
     sidebar::{
         AgentSidebarToken, AgentsSidebarConfig, SidebarConfig, SidebarTokenStyle,
         SpaceSidebarToken, SpacesSidebarConfig,
@@ -39,6 +41,7 @@ pub use self::{
 };
 
 pub(crate) use self::keybinds::parse_key_combo;
+pub(crate) use self::openers::{render_opener_argv, OpenerValues};
 pub(crate) use self::write::{update_file_at, write_edit, ConfigEdit};
 pub(crate) use self::{
     io::upsert_top_level_bool,

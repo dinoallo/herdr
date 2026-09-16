@@ -194,6 +194,7 @@ fn run_client_with_mode(
         endpoint_keybindings,
         remote_image_paste_key,
         shell_config,
+        openers: loaded_config.config.openers,
     };
 
     crate::logging::startup("client");
@@ -1904,6 +1905,7 @@ async fn run_client_loop(
                                         match open_workspace::open_workspace(
                                             &endpoint_id,
                                             &endpoint_catalog,
+                                            &config.openers,
                                             &request.path,
                                             request.opener.as_deref(),
                                         ) {

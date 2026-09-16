@@ -554,6 +554,7 @@ fn popup_command_blocks_underlying_input_until_surface_or_error() {
         command: "secret-popup-command".into(),
         action: crate::config::CustomCommandAction::Popup,
         description: None,
+        opener: None,
         width: None,
         height: None,
     };
@@ -566,6 +567,7 @@ fn popup_command_blocks_underlying_input_until_surface_or_error() {
             binding_labels: binding.bindings.labels(),
             action: crate::protocol::ClientShellCommandAction::Popup,
             description: None,
+            opener: None,
         });
     state.set_snapshot(Box::new(projection));
     state.set_pane_surface(surface());
@@ -607,6 +609,7 @@ fn popup_command_blocks_underlying_input_until_surface_or_error() {
         command: "secret-popup-command".into(),
         action: crate::config::CustomCommandAction::Popup,
         description: None,
+        opener: None,
         width: None,
         height: None,
     };

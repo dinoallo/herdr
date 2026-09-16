@@ -6935,6 +6935,7 @@
             "workspace_not_found",
             "invalid_path",
             "unsupported_opener",
+            "opener_misconfigured",
             "launch_failed",
             "timed_out"
           ],
@@ -10277,6 +10278,13 @@
             },
             {
               "properties": {
+                "message": {
+                  "description": "Client-supplied detail for a failed open, when available.",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
                 "opened": {
                   "type": "boolean"
                 },

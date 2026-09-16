@@ -233,6 +233,9 @@ pub enum ResponseResult {
     ClientOpenWorkspace {
         opened: bool,
         reason: ClientOpenWorkspaceReason,
+        /// Client-supplied detail for a failed open, when available.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        message: Option<String>,
     },
     IntegrationList {
         integrations: Vec<super::integrations::IntegrationInfo>,

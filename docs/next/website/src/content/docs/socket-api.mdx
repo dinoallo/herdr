@@ -396,11 +396,15 @@ Open a workspace on the foreground client or on the client identified by an invo
 ```
 
 The server resolves the workspace checkout path and forwards the request to the
-selected client. The client opens a local path directly or an SSH endpoint as
-`ssh://<target>/<remote-path>`. The response is `type: "client_open_workspace"`
-with `opened` and a reason such as `opened`, `no_target_client`,
-`unsupported_client`, `endpoint_mismatch`, `workspace_not_found`,
-`invalid_path`, `unsupported_opener`, `launch_failed`, or `timed_out`.
+selected client. The client resolves `opener` against its own `[[openers]]`
+config and opens the workspace with the entry's argv template: local endpoints
+use `argv`, SSH endpoints use `argv_remote` with the remote path and SSH target.
+Herdr core ships no editor definitions. The response is
+`type: "client_open_workspace"` with `opened`, a reason such as `opened`,
+`no_target_client`, `unsupported_client`, `endpoint_mismatch`,
+`workspace_not_found`, `invalid_path`, `unsupported_opener`,
+`opener_misconfigured`, `launch_failed`, or `timed_out`, and an optional
+`message` with the client-side failure detail.
 
 Worktree methods manage Git checkouts as Herdr workspaces. `worktree.create` creates a checkout and returns the new `workspace`, `tab`, `root_pane`, and `worktree` records. If the requested branch already exists locally, it checks out that branch; otherwise it creates the branch from the requested base or `HEAD`. `worktree.open` opens an existing checkout or returns the already-open workspace. `worktree.remove` runs `git worktree remove` against a linked child workspace and never deletes the branch.
 
