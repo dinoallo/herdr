@@ -399,6 +399,7 @@ pub(crate) enum ServerEvent {
         mouse_capture: bool,
         surface_active: bool,
         surface_reuse: bool,
+        endpoint_capabilities: Vec<String>,
         writer: ClientWriter,
     },
     /// A client sent an input message.
@@ -507,6 +508,11 @@ pub(crate) enum ServerEvent {
         client_id: u64,
         boot_id: String,
         request: Box<crate::api::schema::Request>,
+    },
+    /// A client-owned shell completed a server-requested open-workspace intent.
+    ClientOpenWorkspaceResult {
+        client_id: u64,
+        result: crate::protocol::endpoint::EndpointOpenWorkspaceResult,
     },
     /// A well-framed endpoint request could not be dispatched by this server.
     ClientShellEndpointRequestError {
@@ -765,6 +771,7 @@ pub(crate) fn handle_client_handshake(
                     hello.mouse_capture,
                     hello.surface_active,
                     hello.surface_reuse,
+                    hello.capabilities,
                 )),
             )
         }
@@ -860,6 +867,7 @@ pub(crate) fn handle_client_handshake(
         mouse_capture,
         surface_active,
         surface_reuse,
+        endpoint_capabilities,
     )) = shell_options
     {
         ServerEvent::ClientShellConnected {
@@ -874,6 +882,7 @@ pub(crate) fn handle_client_handshake(
             mouse_capture,
             surface_active,
             surface_reuse,
+            endpoint_capabilities,
             writer,
         }
     } else {
@@ -1320,6 +1329,17 @@ fn client_read_loop_with_endpoint_controls(
                     token: data,
                 }
             }
+            ClientMessage::EndpointControl { kind, data }
+                if kind == crate::protocol::endpoint::CLIENT_OPEN_WORKSPACE_RESULT_KIND =>
+            {
+                match serde_json::from_str(&data) {
+                    Ok(result) => ServerEvent::ClientOpenWorkspaceResult { client_id, result },
+                    Err(error) => {
+                        warn!(client_id, %error, "invalid open-workspace result");
+                        continue;
+                    }
+                }
+            }
             ClientMessage::EndpointControl { kind, data } => {
                 let Some(response) = crate::server::client_endpoint_control::response(&kind, data)
                 else {
@@ -1453,6 +1473,7 @@ mod tests {
             surface_codecs: vec![crate::protocol::endpoint::SURFACE_CODEC_V1.into()],
             input_codecs: vec![crate::protocol::endpoint::INPUT_CODEC_V1.into()],
             blob_codecs: vec![crate::protocol::endpoint::BLOB_CODEC_V1.into()],
+            capabilities: vec![crate::protocol::endpoint::CLIENT_OPEN_WORKSPACE_CAPABILITY.into()],
         };
         ClientMessage::EndpointControl {
             kind: ENDPOINT_HELLO_KIND.into(),
@@ -1966,6 +1987,7 @@ mod tests {
                 surface_active,
                 surface_reuse,
                 writer,
+                ..
             } => {
                 assert!(!surface_reuse);
                 assert_eq!(client_id, 43);

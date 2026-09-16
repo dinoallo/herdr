@@ -226,6 +226,7 @@ impl App {
         &mut self,
         action_id: String,
         selected_text: Option<String>,
+        invoking_client_token: Option<String>,
     ) -> Result<(), String> {
         self.refresh_installed_plugins()
             .map_err(|err| format!("failed to load plugin registry: {err}"))?;
@@ -240,9 +241,11 @@ impl App {
             &action.qualified_id(),
         )
         .map_err(|(_, message)| message)?;
-        let mut context = self.current_plugin_context("keybinding");
+        let mut context =
+            self.current_plugin_context(invoking_client_token.as_deref().unwrap_or("keybinding"));
         context.invocation_source = Some("keybinding".to_string());
         context.selected_text = selected_text;
+        context.invoking_client_token = invoking_client_token;
         self.start_plugin_command(
             &plugin,
             Some(action.action_id),
@@ -1778,7 +1781,7 @@ command = ["sh", "-c", '"$HERDR_BIN_PATH" --list >/dev/null; printf "%s\n" "$?" 
 "#,
             );
             link_manifest(&mut app, &plugin_root);
-            app.invoke_plugin_action_from_keybind("example.update.probe".into(), None)
+            app.invoke_plugin_action_from_keybind("example.update.probe".into(), None, None)
                 .unwrap();
             let action_status = read_capture_when_ready(&plugin_root.join("action-status"), || {
                 app.drain_all_internal_events();
@@ -2464,6 +2467,7 @@ command = ["sh", "-c", "printf %s ${{HERDR_PANE_ID-unset}} > '{}'; sleep 1"]
                     selected_text: None,
                     invocation_source: Some("test".into()),
                     correlation_id: Some("external-correlation".into()),
+                    invoking_client_token: None,
                     clicked_url: None,
                     link_handler_id: None,
                 }),
@@ -2595,7 +2599,7 @@ command = ["sh", "-c", "printf %s ${{HERDR_PANE_ID-unset}} > '{}'; sleep 1"]
 
         make_stale(&mut app);
         assert!(app
-            .invoke_plugin_action_from_keybind("bootstrap".into(), None)
+            .invoke_plugin_action_from_keybind("bootstrap".into(), None, None)
             .unwrap_err()
             .contains("disabled"));
 

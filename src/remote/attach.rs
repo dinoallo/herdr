@@ -52,6 +52,7 @@ pub(crate) fn run_remote(remote: RemoteLaunch) -> io::Result<()> {
         remote.keybindings,
         remote.live_handoff,
     );
+    let remote_target = remote.target.clone();
     let manage_ssh_config = crate::config::Config::load()
         .config
         .remote
@@ -83,7 +84,12 @@ pub(crate) fn run_remote(remote: RemoteLaunch) -> io::Result<()> {
         false,
     )?;
 
-    run_client_process(&local_socket, &reattach_command, remote.keybindings)
+    run_client_process(
+        &local_socket,
+        &reattach_command,
+        &remote_target,
+        remote.keybindings,
+    )
 }
 
 pub(crate) fn prepare_saved_ssh(target: &str, session_name: &str) -> io::Result<()> {
@@ -3029,6 +3035,7 @@ fn copy_local_stream_to_writer<W: io::Write>(
 fn run_client_process(
     local_socket: &Path,
     reattach_command: &str,
+    remote_target: &str,
     keybindings: RemoteKeybindings,
 ) -> io::Result<()> {
     let exe = std::env::current_exe()?;
@@ -3039,6 +3046,7 @@ fn run_client_process(
             local_socket,
         )
         .env(REATTACH_COMMAND_ENV_VAR, reattach_command)
+        .env(crate::remote::REMOTE_TARGET_ENV_VAR, remote_target)
         .env(REMOTE_KEYBINDINGS_ENV_VAR, keybindings.as_str())
         .env_remove(crate::api::SOCKET_PATH_ENV_VAR)
         .stdin(Stdio::inherit())

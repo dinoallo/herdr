@@ -72,6 +72,7 @@ use crate::server::socket_paths::{
 use crate::server::terminal_attach::paste_payload_for_runtime;
 
 mod bootstrap;
+mod client_open_workspace;
 mod client_views;
 mod endpoint_requests;
 mod lifecycle;
@@ -222,6 +223,11 @@ pub struct HeadlessServer {
     /// Window title set through `client.window_title.set`. While present it wins
     /// over the configured `ui.window_title` until the API clears it again.
     api_window_title: Option<String>,
+    /// In-flight server-to-client open-workspace requests.
+    pending_client_open_workspaces:
+        HashMap<String, client_open_workspace::PendingClientOpenWorkspace>,
+    /// Monotonic id for server-to-client open-workspace requests.
+    next_client_open_workspace_request_id: u64,
     /// Server-owned keybindings, restored when foreground clients use server mode.
     server_keybindings: crate::config::LiveKeybindConfig,
     /// Full server config warning shown to clients that use server keybindings.
@@ -363,6 +369,8 @@ impl HeadlessServer {
             ),
             sent_window_title: None,
             api_window_title: None,
+            pending_client_open_workspaces: HashMap::new(),
+            next_client_open_workspace_request_id: 1,
             server_keybindings,
             server_config_diagnostic,
             server_config_diagnostic_without_keybindings,
@@ -661,7 +669,9 @@ impl HeadlessServer {
             }
 
             match event {
-                LoopEvent::Timer => {}
+                LoopEvent::Timer => {
+                    self.expire_client_open_workspace_requests();
+                }
                 LoopEvent::Internal(ev) => {
                     if self.handle_internal_event_with_forwarding(ev) {
                         needs_render = true;
@@ -1969,6 +1979,7 @@ impl HeadlessServer {
                 mouse_capture,
                 surface_active,
                 surface_reuse,
+                endpoint_capabilities,
                 writer,
             } => {
                 if self.handoff_in_progress {
@@ -2014,6 +2025,7 @@ impl HeadlessServer {
                 connection.shell_uses_endpoint_keybindings = endpoint_keybindings;
                 connection.shell_mouse_capture = mouse_capture;
                 connection.shell_surface_active = surface_active;
+                connection.endpoint_capabilities = endpoint_capabilities;
                 connection.render_state.enable_surface_reuse(surface_reuse);
                 connection.shell_projection_revision = 1;
                 let config_diagnostic = if endpoint_keybindings {
@@ -2586,6 +2598,9 @@ impl HeadlessServer {
                 boot_id,
                 request,
             } => self.handle_client_shell_endpoint_request(client_id, boot_id, request),
+            ServerEvent::ClientOpenWorkspaceResult { client_id, result } => {
+                self.handle_client_open_workspace_result(client_id, result)
+            }
             ServerEvent::ClientShellEndpointResponseChunkReady {
                 client_id,
                 boot_id,
@@ -2657,11 +2672,13 @@ impl HeadlessServer {
             ServerEvent::ClientDetach { client_id } => {
                 info!(client_id, "client detached");
                 self.send_terminal_stream_detach_shutdown(client_id);
+                self.fail_client_open_workspaces_for_disconnected_client(client_id);
                 self.remove_client_and_resize_if_needed(client_id);
                 true
             }
             ServerEvent::ClientDisconnected { client_id } => {
                 info!(client_id, "client disconnected");
+                self.fail_client_open_workspaces_for_disconnected_client(client_id);
                 self.remove_client_and_resize_if_needed(client_id);
                 true
             }
@@ -2692,6 +2709,7 @@ impl HeadlessServer {
             ev,
             ServerEvent::ClientConnected { .. }
                 | ServerEvent::ClientShellConnected { .. }
+                | ServerEvent::ClientOpenWorkspaceResult { .. }
                 | ServerEvent::ClientShellEndpointResponseChunkReady { .. }
                 | ServerEvent::ClientDisconnected { .. }
                 | ServerEvent::ClientWriterDrained { .. }
@@ -2964,6 +2982,13 @@ impl HeadlessServer {
                 return false;
             }
         };
+
+        if matches!(
+            &msg.request.method,
+            api::schema::Method::ClientOpenWorkspace(_)
+        ) {
+            return self.handle_client_open_workspace_api(msg);
+        }
 
         let metadata_expired = self.app.expire_due_metadata(Instant::now());
         let stream_open = match &msg.request.method {

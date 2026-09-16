@@ -1689,6 +1689,29 @@
           ],
           "type": "object"
         },
+        "ClientOpenWorkspaceParams": {
+          "properties": {
+            "opener": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "target": {
+              "$ref": "#/schemas/request/$defs/ClientTarget",
+              "default": {
+                "kind": "foreground"
+              }
+            },
+            "workspace_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "workspace_id"
+          ],
+          "type": "object"
+        },
         "ClientShellSurfaceSetParams": {
           "description": "Updates whether the requesting client shell receives and controls pane presentation.",
           "properties": {
@@ -1700,6 +1723,38 @@
             "active"
           ],
           "type": "object"
+        },
+        "ClientTarget": {
+          "oneOf": [
+            {
+              "properties": {
+                "kind": {
+                  "const": "foreground",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "invocation_id": {
+                  "type": "string"
+                },
+                "kind": {
+                  "const": "invocation",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "invocation_id"
+              ],
+              "type": "object"
+            }
+          ]
         },
         "ClientWindowTitleSetParams": {
           "properties": {
@@ -3570,6 +3625,12 @@
                 "null"
               ]
             },
+            "invoking_client_token": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "link_handler_id": {
               "type": [
                 "string",
@@ -4931,6 +4992,22 @@
             },
             "params": {
               "$ref": "#/schemas/request/$defs/EmptyParams"
+            }
+          },
+          "required": [
+            "method",
+            "params"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "client.open_workspace",
+              "type": "string"
+            },
+            "params": {
+              "$ref": "#/schemas/request/$defs/ClientOpenWorkspaceParams"
             }
           },
           "required": [
@@ -6846,6 +6923,20 @@
             "blocked",
             "done",
             "unknown"
+          ],
+          "type": "string"
+        },
+        "ClientOpenWorkspaceReason": {
+          "enum": [
+            "opened",
+            "no_target_client",
+            "unsupported_client",
+            "endpoint_mismatch",
+            "workspace_not_found",
+            "invalid_path",
+            "unsupported_opener",
+            "launch_failed",
+            "timed_out"
           ],
           "type": "string"
         },
@@ -8840,6 +8931,12 @@
                 "null"
               ]
             },
+            "invoking_client_token": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "link_handler_id": {
               "type": [
                 "string",
@@ -10180,6 +10277,26 @@
             },
             {
               "properties": {
+                "opened": {
+                  "type": "boolean"
+                },
+                "reason": {
+                  "$ref": "#/schemas/success_response/$defs/ClientOpenWorkspaceReason"
+                },
+                "type": {
+                  "const": "client_open_workspace",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type",
+                "opened",
+                "reason"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
                 "integrations": {
                   "items": {
                     "$ref": "#/schemas/success_response/$defs/IntegrationInfo"
@@ -10589,6 +10706,11 @@
         },
         "ServerCapabilities": {
           "properties": {
+            "client_open_workspace": {
+              "default": false,
+              "description": "Whether this server supports forwarding workspace-open intents to clients.",
+              "type": "boolean"
+            },
             "detached_server_daemon": {
               "default": false,
               "type": "boolean"

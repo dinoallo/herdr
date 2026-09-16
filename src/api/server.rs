@@ -71,6 +71,7 @@ fn default_capabilities() -> Option<ServerCapabilities> {
         endpoint_protocol_generation: Some(crate::protocol::endpoint::ENDPOINT_PROTOCOL_GENERATION),
         surface_interest: true,
         health_check: true,
+        client_open_workspace: true,
     })
 }
 
@@ -396,6 +397,7 @@ pub(crate) fn api_method_name(method: &Method) -> &'static str {
         Method::CommandInvoke(_) => "command.invoke",
         Method::ClientWindowTitleSet(_) => "client.window_title.set",
         Method::ClientWindowTitleClear(_) => "client.window_title.clear",
+        Method::ClientOpenWorkspace(_) => "client.open_workspace",
         Method::ClientShellSurfaceSet(_) => "client_shell.surface.set",
         Method::SessionSnapshot(_) => "session.snapshot",
         Method::WorkspaceCreate(_) => "workspace.create",
@@ -1150,6 +1152,7 @@ mod tests {
                 ),
                 surface_interest: true,
                 health_check: true,
+                client_open_workspace: true,
             }),
             None,
             None,

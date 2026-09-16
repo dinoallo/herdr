@@ -10,7 +10,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::{ClientShellSnapshot, ClientSurfaceSize, ServerMessage};
+use super::{ClientMessage, ClientShellSnapshot, ClientSurfaceSize, ServerMessage};
 
 pub const ENDPOINT_PROTOCOL_GENERATION: u32 = 1;
 pub const ENDPOINT_HELLO_KIND: &str = "endpoint.hello.v1";
@@ -29,6 +29,9 @@ pub const HEALTH_PING_KIND: &str = "endpoint.health.ping.v1";
 pub const HEALTH_PONG_KIND: &str = "endpoint.health.pong.v1";
 pub const AGENT_VIEW_PROJECTION_CAPABILITY: &str = "agent_view_projection";
 pub const AGENT_VIEW_PROJECTION_KIND: &str = "endpoint.agent-view.v1";
+pub const CLIENT_OPEN_WORKSPACE_CAPABILITY: &str = "client_open_workspace";
+pub const CLIENT_OPEN_WORKSPACE_REQUEST_KIND: &str = "endpoint.client-open-workspace.v1";
+pub const CLIENT_OPEN_WORKSPACE_RESULT_KIND: &str = "endpoint.client-open-workspace.result.v1";
 
 fn default_true() -> bool {
     true
@@ -57,6 +60,9 @@ pub struct EndpointClientHello {
     pub input_codecs: Vec<String>,
     #[serde(default)]
     pub blob_codecs: Vec<String>,
+    /// Optional client-owned capabilities advertised for server-to-client intents.
+    #[serde(default)]
+    pub capabilities: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -73,6 +79,24 @@ pub struct EndpointAgentViewProjection {
     pub revision: u64,
     #[serde(default)]
     pub view: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct EndpointOpenWorkspaceRequest {
+    pub request_id: String,
+    pub endpoint_boot_id: String,
+    pub path: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub opener: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct EndpointOpenWorkspaceResult {
+    pub request_id: String,
+    pub opened: bool,
+    pub reason: crate::api::schema::ClientOpenWorkspaceReason,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -114,6 +138,24 @@ pub fn agent_view_projection_message(
     })
 }
 
+pub fn open_workspace_request_message(
+    request: &EndpointOpenWorkspaceRequest,
+) -> serde_json::Result<ServerMessage> {
+    Ok(ServerMessage::EndpointControl {
+        kind: CLIENT_OPEN_WORKSPACE_REQUEST_KIND.into(),
+        data: serde_json::to_string(request)?,
+    })
+}
+
+pub fn open_workspace_result_message(
+    result: &EndpointOpenWorkspaceResult,
+) -> serde_json::Result<ClientMessage> {
+    Ok(ClientMessage::EndpointControl {
+        kind: CLIENT_OPEN_WORKSPACE_RESULT_KIND.into(),
+        data: serde_json::to_string(result)?,
+    })
+}
+
 impl EndpointClientHello {
     pub fn supports_required_codecs(&self) -> bool {
         self.snapshot_codecs
@@ -147,6 +189,7 @@ impl EndpointServerWelcome {
                 PRESENTATION_EFFECTS_FENCE_CAPABILITY.into(),
                 HEALTH_CHECK_CAPABILITY.into(),
                 AGENT_VIEW_PROJECTION_CAPABILITY.into(),
+                CLIENT_OPEN_WORKSPACE_CAPABILITY.into(),
             ],
             error: None,
         }
@@ -190,6 +233,7 @@ mod tests {
             surface_codecs: vec![SURFACE_CODEC_V1.into()],
             input_codecs: vec![INPUT_CODEC_V1.into()],
             blob_codecs: vec![BLOB_CODEC_V1.into()],
+            capabilities: vec![CLIENT_OPEN_WORKSPACE_CAPABILITY.into()],
         }
     }
 
@@ -237,6 +281,7 @@ mod tests {
         )))
         .unwrap();
         assert!(hello.supports_required_codecs());
+        assert!(hello.capabilities.is_empty());
 
         let welcome: EndpointServerWelcome = serde_json::from_str(include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
@@ -305,6 +350,43 @@ mod tests {
     }
 
     #[test]
+    fn open_workspace_request_and_result_use_named_controls() {
+        let request = EndpointOpenWorkspaceRequest {
+            request_id: "open-1".into(),
+            endpoint_boot_id: "boot".into(),
+            path: "/repo".into(),
+            opener: Some("zed".into()),
+        };
+        let ServerMessage::EndpointControl { kind, data } =
+            open_workspace_request_message(&request).unwrap()
+        else {
+            panic!("request should use endpoint control");
+        };
+        assert_eq!(kind, CLIENT_OPEN_WORKSPACE_REQUEST_KIND);
+        assert_eq!(
+            serde_json::from_str::<EndpointOpenWorkspaceRequest>(&data).unwrap(),
+            request
+        );
+
+        let result = EndpointOpenWorkspaceResult {
+            request_id: "open-1".into(),
+            opened: true,
+            reason: crate::api::schema::ClientOpenWorkspaceReason::Opened,
+            message: None,
+        };
+        let ClientMessage::EndpointControl { kind, data } =
+            open_workspace_result_message(&result).unwrap()
+        else {
+            panic!("result should use endpoint control");
+        };
+        assert_eq!(kind, CLIENT_OPEN_WORKSPACE_RESULT_KIND);
+        assert_eq!(
+            serde_json::from_str::<EndpointOpenWorkspaceResult>(&data).unwrap(),
+            result
+        );
+    }
+
+    #[test]
     fn snapshot_json_tolerates_future_fields_and_command_actions() {
         let mut snapshot = match snapshot_message(&snapshot()).unwrap() {
             ServerMessage::EndpointControl { data, .. } => {
@@ -349,6 +431,7 @@ mod tests {
                 PRESENTATION_EFFECTS_FENCE_CAPABILITY.to_string(),
                 HEALTH_CHECK_CAPABILITY.to_string(),
                 AGENT_VIEW_PROJECTION_CAPABILITY.to_string(),
+                CLIENT_OPEN_WORKSPACE_CAPABILITY.to_string(),
             ]
         );
     }

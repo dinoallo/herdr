@@ -138,6 +138,18 @@ herdr notification show <title> [--body TEXT] [--position top-left|top-right|bot
 
 `notification show` uses the configured `[ui.toast]` delivery. `--position` only affects in-app Herdr toasts. `--sound` defaults to `none`; `done` and `request` play the existing finished and needs-attention sounds only when the notification is shown.
 
+## Opening a workspace locally
+
+```bash
+herdr open-workspace <workspace-id> [--opener zed] [--invocation-id TOKEN|--foreground]
+```
+
+`open-workspace` asks the foreground Herdr client, or the client identified by
+an invocation token, to open the workspace in an editor. The client resolves
+the selected endpoint: local workspaces use their local path, while saved SSH
+machines open as `ssh://<target>/<remote-path>`. The only opener currently
+implemented is `zed`.
+
 ## Sessions
 
 ```bash

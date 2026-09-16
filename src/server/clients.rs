@@ -191,6 +191,8 @@ pub(crate) struct ClientConnection {
     pub(crate) shell_deferred_navigation_response: Option<Vec<u8>>,
     /// Whether this shell uses the endpoint-owned keymap rather than a client-owned keymap.
     pub(crate) shell_uses_endpoint_keybindings: bool,
+    /// Optional server-to-client capabilities advertised by this endpoint shell.
+    pub(crate) endpoint_capabilities: Vec<String>,
     /// Channels for sending framed ServerMessage data to the client writer thread.
     pub(crate) writer: Option<ClientWriter>,
 }
@@ -253,8 +255,15 @@ impl ClientConnection {
             shell_deferred_navigation_request_id: None,
             shell_deferred_navigation_response: None,
             shell_uses_endpoint_keybindings: false,
+            endpoint_capabilities: Vec::new(),
             writer,
         }
+    }
+
+    pub(crate) fn supports_endpoint_capability(&self, capability: &str) -> bool {
+        self.endpoint_capabilities
+            .iter()
+            .any(|candidate| candidate == capability)
     }
 
     pub(crate) fn request_repaint(&mut self) {

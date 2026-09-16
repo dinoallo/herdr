@@ -389,6 +389,8 @@ pub struct PluginInvocationContext {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub correlation_id: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub invoking_client_token: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub clicked_url: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub link_handler_id: Option<String>,

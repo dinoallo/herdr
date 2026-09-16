@@ -23,6 +23,9 @@ impl App {
             context.selected_text = provided.selected_text.or(context.selected_text);
             context.invocation_source = provided.invocation_source.or(context.invocation_source);
             context.correlation_id = provided.correlation_id.or(context.correlation_id);
+            context.invoking_client_token = provided
+                .invoking_client_token
+                .or(context.invoking_client_token);
             context.clicked_url = provided.clicked_url.or(context.clicked_url);
             context.link_handler_id = provided.link_handler_id.or(context.link_handler_id);
         }
@@ -373,6 +376,7 @@ impl App {
             selected_text: None,
             invocation_source: Some("api".to_string()),
             correlation_id: Some(correlation_id.to_string()),
+            invoking_client_token: None,
             clicked_url: None,
             link_handler_id: None,
         }
@@ -404,6 +408,7 @@ fn empty_plugin_context(correlation_id: &str) -> PluginInvocationContext {
         selected_text: None,
         invocation_source: Some("api".to_string()),
         correlation_id: Some(correlation_id.to_string()),
+        invoking_client_token: None,
         clicked_url: None,
         link_handler_id: None,
     }

@@ -28,6 +28,7 @@ mod handshake;
 mod input;
 mod loop_config;
 mod notifications;
+mod open_workspace;
 mod shell;
 mod shell_runtime;
 mod startup;
@@ -1887,6 +1888,61 @@ async fn run_client_loop(
                                         generation,
                                         projection,
                                     );
+                                }
+                                continue;
+                            }
+                            Ok(endpoint::EndpointControlMessage::OpenWorkspace(request)) => {
+                                let result = match state.shell.as_ref() {
+                                    Some(shell)
+                                        if shell.active_endpoint_id() == &endpoint_id
+                                            && shell
+                                                .endpoint_boot_id(&endpoint_id)
+                                                .is_some_and(|boot_id| {
+                                                    boot_id == request.endpoint_boot_id
+                                                }) =>
+                                    {
+                                        match open_workspace::open_workspace(
+                                            &endpoint_id,
+                                            &endpoint_catalog,
+                                            &request.path,
+                                            request.opener.as_deref(),
+                                        ) {
+                                            Ok(child) => {
+                                                state.detached_process_children.push(child);
+                                                crate::protocol::endpoint::EndpointOpenWorkspaceResult {
+                                                    request_id: request.request_id,
+                                                    opened: true,
+                                                    reason:
+                                                        crate::api::schema::ClientOpenWorkspaceReason::Opened,
+                                                    message: None,
+                                                }
+                                            }
+                                            Err((reason, message)) => {
+                                                crate::protocol::endpoint::EndpointOpenWorkspaceResult {
+                                                    request_id: request.request_id,
+                                                    opened: false,
+                                                    reason,
+                                                    message: Some(message),
+                                                }
+                                            }
+                                        }
+                                    }
+                                    _ => crate::protocol::endpoint::EndpointOpenWorkspaceResult {
+                                        request_id: request.request_id,
+                                        opened: false,
+                                        reason: crate::api::schema::ClientOpenWorkspaceReason::EndpointMismatch,
+                                        message: Some(
+                                            "the active endpoint no longer matches this request"
+                                                .to_string(),
+                                        ),
+                                    },
+                                };
+                                if let Ok(message) =
+                                    crate::protocol::endpoint::open_workspace_result_message(
+                                        &result,
+                                    )
+                                {
+                                    write_stream.send_to(&endpoint_id, &message);
                                 }
                                 continue;
                             }

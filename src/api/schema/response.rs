@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::agents::AgentInfo;
+use super::client::ClientOpenWorkspaceReason;
 use super::common::{ClientWindowTitleReason, NotificationShowReason};
 use super::events::EventEnvelope;
 use super::integrations::{
@@ -228,6 +229,10 @@ pub enum ResponseResult {
     ClientWindowTitle {
         changed: bool,
         reason: ClientWindowTitleReason,
+    },
+    ClientOpenWorkspace {
+        opened: bool,
+        reason: ClientOpenWorkspaceReason,
     },
     IntegrationList {
         integrations: Vec<super::integrations::IntegrationInfo>,

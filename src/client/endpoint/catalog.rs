@@ -226,6 +226,19 @@ impl EndpointCatalog {
         self.ssh.iter().any(|profile| profile.enabled)
     }
 
+    pub(crate) fn target_for_endpoint(
+        &self,
+        endpoint_id: &super::ClientEndpointId,
+    ) -> Option<&str> {
+        let super::ClientEndpointId::Ssh(profile_id) = endpoint_id else {
+            return None;
+        };
+        self.ssh
+            .iter()
+            .find(|profile| profile.enabled && &profile.id == profile_id)
+            .map(|profile| profile.target.as_str())
+    }
+
     pub(crate) fn contains_enabled_target_session(&self, target: &str, session: &str) -> bool {
         self.ssh.iter().any(|profile| {
             profile.enabled && profile.target == target && profile.session == session

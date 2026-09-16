@@ -373,6 +373,40 @@ fn client_window_title_requests_round_trip() {
 }
 
 #[test]
+fn client_open_workspace_requests_and_responses_round_trip() {
+    let request = Request {
+        id: "req_open_workspace".into(),
+        method: Method::ClientOpenWorkspace(ClientOpenWorkspaceParams {
+            workspace_id: "w1".into(),
+            opener: Some("zed".into()),
+            target: ClientTarget::Invocation {
+                invocation_id: "invoke-1".into(),
+            },
+        }),
+    };
+    let json = serde_json::to_value(&request).unwrap();
+    assert_eq!(json["method"], "client.open_workspace");
+    assert_eq!(json["params"]["workspace_id"], "w1");
+    assert_eq!(
+        json["params"]["target"],
+        serde_json::json!({"kind": "invocation", "invocation_id": "invoke-1"})
+    );
+    assert_eq!(serde_json::from_value::<Request>(json).unwrap(), request);
+
+    let response = SuccessResponse {
+        id: "req_open_workspace".into(),
+        result: ResponseResult::ClientOpenWorkspace {
+            opened: true,
+            reason: ClientOpenWorkspaceReason::Opened,
+        },
+    };
+    let json = serde_json::to_value(response).unwrap();
+    assert_eq!(json["result"]["type"], "client_open_workspace");
+    assert_eq!(json["result"]["opened"], true);
+    assert_eq!(json["result"]["reason"], "opened");
+}
+
+#[test]
 fn agent_view_requests_round_trip() {
     let set_json = serde_json::json!({
         "id": "view-set",
@@ -726,6 +760,7 @@ fn success_response_round_trips() {
                 endpoint_protocol_generation: Some(1),
                 surface_interest: true,
                 health_check: true,
+                client_open_workspace: true,
             }),
         },
     };

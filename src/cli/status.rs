@@ -280,6 +280,7 @@ struct ServerCapabilitiesJson {
     endpoint_protocol_generation: Option<u32>,
     surface_interest: bool,
     health_check: bool,
+    client_open_workspace: bool,
 }
 
 #[derive(Serialize)]
@@ -298,6 +299,7 @@ fn client_status_json() -> ClientStatusJson {
             crate::protocol::endpoint::SURFACE_INTEREST_CAPABILITY,
             crate::protocol::endpoint::PRESENTATION_EFFECTS_FENCE_CAPABILITY,
             crate::protocol::endpoint::HEALTH_CHECK_CAPABILITY,
+            crate::protocol::endpoint::CLIENT_OPEN_WORKSPACE_CAPABILITY,
         ],
         remote_host_bridge: true,
         remote_bridge_idle_timeout: crate::platform::REMOTE_BRIDGE_IDLE_TIMEOUT_SUPPORTED,
@@ -325,6 +327,7 @@ fn server_status_json(server: &ServerRuntimeStatus) -> ServerStatusJson {
                     endpoint_protocol_generation: capabilities.endpoint_protocol_generation,
                     surface_interest: capabilities.surface_interest,
                     health_check: capabilities.health_check,
+                    client_open_workspace: capabilities.client_open_workspace,
                 }),
             compatible: protocol.map(|value| value == crate::protocol::PROTOCOL_VERSION),
             endpoint_compatible: capabilities.as_ref().and_then(|capabilities| {
@@ -422,6 +425,7 @@ mod tests {
                 endpoint_protocol_generation: endpoint_generation,
                 surface_interest: true,
                 health_check: true,
+                client_open_workspace: true,
             }),
         }
     }

@@ -27,4 +27,7 @@ pub struct ServerCapabilities {
     /// Whether this server supports endpoint health probes.
     #[serde(default)]
     pub health_check: bool,
+    /// Whether this server supports forwarding workspace-open intents to clients.
+    #[serde(default)]
+    pub client_open_workspace: bool,
 }

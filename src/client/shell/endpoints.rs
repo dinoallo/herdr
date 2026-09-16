@@ -427,6 +427,10 @@ impl ClientShellState {
         self.endpoint_label(&self.active_endpoint_id)
     }
 
+    pub(crate) fn active_endpoint_id(&self) -> &ClientEndpointId {
+        &self.active_endpoint_id
+    }
+
     pub(crate) fn endpoint_is_active(&self, endpoint_id: &ClientEndpointId) -> bool {
         &self.active_endpoint_id == endpoint_id
     }

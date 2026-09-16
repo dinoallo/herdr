@@ -10,6 +10,7 @@ pub(crate) enum EndpointControlMessage {
     HealthPong,
     AgentViewProjection(DecodedAgentViewProjection),
     Snapshot(Box<crate::protocol::ClientShellSnapshot>),
+    OpenWorkspace(crate::protocol::endpoint::EndpointOpenWorkspaceRequest),
     Ignored,
 }
 
@@ -52,6 +53,11 @@ pub(crate) fn decode_endpoint_control(
             .map_err(|error| format!("invalid endpoint snapshot: {error}"))?;
         return Ok(EndpointControlMessage::Snapshot(Box::new(snapshot)));
     }
+    if kind == crate::protocol::endpoint::CLIENT_OPEN_WORKSPACE_REQUEST_KIND {
+        let request = serde_json::from_str(data)
+            .map_err(|error| format!("invalid open-workspace request: {error}"))?;
+        return Ok(EndpointControlMessage::OpenWorkspace(request));
+    }
     if kind.starts_with("shell.snapshot.") {
         return Err(format!(
             "unsupported mandatory endpoint snapshot codec {kind:?}"
@@ -75,6 +81,25 @@ mod tests {
             decode_endpoint_control("future.optional", "not json").unwrap(),
             EndpointControlMessage::Ignored
         ));
+    }
+
+    #[test]
+    fn open_workspace_controls_decode() {
+        let request = crate::protocol::endpoint::EndpointOpenWorkspaceRequest {
+            request_id: "open-1".into(),
+            endpoint_boot_id: "boot".into(),
+            path: "/repo".into(),
+            opener: Some("zed".into()),
+        };
+        let decoded = decode_endpoint_control(
+            crate::protocol::endpoint::CLIENT_OPEN_WORKSPACE_REQUEST_KIND,
+            &serde_json::to_string(&request).unwrap(),
+        )
+        .unwrap();
+        let EndpointControlMessage::OpenWorkspace(decoded) = decoded else {
+            panic!("expected open-workspace control");
+        };
+        assert_eq!(decoded, request);
     }
 
     #[test]

@@ -258,7 +258,9 @@ injects `HERDR_SOCKET_PATH`, `HERDR_BIN_PATH`, `HERDR_ENV=1`,
 receive `HERDR_PLUGIN_ACTION_ID`; startup and event hooks receive
 `HERDR_PLUGIN_EVENT` (`startup` for startup hooks), event hooks additionally
 receive `HERDR_PLUGIN_EVENT_JSON`, and pane commands receive
-`HERDR_PLUGIN_ENTRYPOINT_ID`.
+`HERDR_PLUGIN_ENTRYPOINT_ID`. Action commands invoked from a client also receive
+`HERDR_PLUGIN_INVOKING_CLIENT_TOKEN`, an opaque token that can be passed to
+`client.open_workspace` to target the client that invoked the action.
 
 `HERDR_PLUGIN_ROOT` is the installed or linked plugin directory. Do not store
 user credentials or durable state there, because GitHub-installed plugin roots
@@ -273,6 +275,12 @@ file format and lifecycle.
 agent, selected text, clicked URL, and link handler fields when they are
 available for that invocation. Shell plugins can read the individual env vars
 for common ids, or parse the context JSON for the full shape.
+
+Plugins that need to open a workspace on the user's local machine can call
+`client.open_workspace` through `HERDR_BIN_PATH`. The server forwards the
+workspace id and opener to the foreground client, or to the client identified
+by `HERDR_PLUGIN_INVOKING_CLIENT_TOKEN`; the client owns endpoint and local
+editor resolution.
 
 Use `HERDR_BIN_PATH` when a plugin needs to call Herdr portably from Node,
 PowerShell, Bash, or another runtime. The raw socket transport behind

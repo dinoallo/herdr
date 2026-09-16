@@ -82,6 +82,7 @@ impl App {
         id: String,
         params: crate::api::schema::CommandInvokeParams,
     ) -> String {
+        let invoking_client_token = id.clone();
         let Some(binding) = self.resolve_client_shell_command(&params.command_id) else {
             return crate::app::api::responses::encode_error(
                 id,
@@ -94,7 +95,12 @@ impl App {
         }
         let selected_text = if binding.action == crate::config::CustomCommandAction::PluginAction {
             let Some(selection) = params.selection.as_ref() else {
-                return self.execute_custom_command_response(id, &binding, None);
+                return self.execute_custom_command_response(
+                    id,
+                    &binding,
+                    None,
+                    Some(invoking_client_token),
+                );
             };
             if params.pane_id.as_deref() != Some(selection.pane_id.as_str()) {
                 return crate::app::api::responses::encode_error(
@@ -112,7 +118,12 @@ impl App {
         } else {
             None
         };
-        self.execute_custom_command_response(id, &binding, selected_text)
+        self.execute_custom_command_response(
+            id,
+            &binding,
+            selected_text,
+            Some(invoking_client_token),
+        )
     }
 
     fn execute_custom_command_response(
@@ -120,8 +131,9 @@ impl App {
         id: String,
         binding: &crate::config::CustomCommandKeybind,
         selected_text: Option<String>,
+        invoking_client_token: Option<String>,
     ) -> String {
-        match self.execute_custom_command_binding(binding, selected_text) {
+        match self.execute_custom_command_binding(binding, selected_text, invoking_client_token) {
             Ok(()) => crate::app::api::responses::encode_success(
                 id,
                 crate::api::schema::ResponseResult::Ok {},
@@ -213,6 +225,7 @@ impl App {
         &mut self,
         binding: &crate::config::CustomCommandKeybind,
         selected_text: Option<String>,
+        invoking_client_token: Option<String>,
     ) -> io::Result<()> {
         match binding.action {
             crate::config::CustomCommandAction::Shell => self.spawn_custom_command(binding),
@@ -221,7 +234,11 @@ impl App {
             }
             crate::config::CustomCommandAction::Popup => self.spawn_custom_popup_command(binding),
             crate::config::CustomCommandAction::PluginAction => self
-                .invoke_plugin_action_from_keybind(binding.command.clone(), selected_text)
+                .invoke_plugin_action_from_keybind(
+                    binding.command.clone(),
+                    selected_text,
+                    invoking_client_token,
+                )
                 .map_err(io::Error::other),
         }
     }
