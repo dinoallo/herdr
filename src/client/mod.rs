@@ -1894,8 +1894,12 @@ async fn run_client_loop(
                             }
                             Ok(endpoint::EndpointControlMessage::OpenWorkspace(request)) => {
                                 let result = match state.shell.as_ref() {
+                                    // A request on the Local connection targets a local
+                                    // workspace, so it stays valid while another endpoint
+                                    // holds the surface. Remote endpoints must still be active.
                                     Some(shell)
-                                        if shell.active_endpoint_id() == &endpoint_id
+                                        if (shell.active_endpoint_id() == &endpoint_id
+                                            || endpoint_id.is_local())
                                             && shell
                                                 .endpoint_boot_id(&endpoint_id)
                                                 .is_some_and(|boot_id| {
